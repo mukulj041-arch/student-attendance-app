@@ -50,7 +50,7 @@ const mockStudents = [
   },
 ]
 
-const mockEvents = [
+const initialEvents = [
   {
     id: 1,
     title: "Computer Science Seminar",
@@ -87,6 +87,8 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
   const [activeTab, setActiveTab] = useState<"overview" | "students" | "events" | "reports">("overview")
   const [searchTerm, setSearchTerm] = useState("")
   const [showAddEvent, setShowAddEvent] = useState(false)
+  const [events, setEvents] = useState(initialEvents)
+  const [editingEvent, setEditingEvent] = useState<any>(null)
   const [newEvent, setNewEvent] = useState({
     title: "",
     date: "",
@@ -103,8 +105,63 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
   )
 
   const handleAddEvent = () => {
-    // In a real app, this would make an API call
-    console.log("Adding event:", newEvent)
+    if (newEvent.title && newEvent.date && newEvent.time && newEvent.location) {
+      const eventToAdd = {
+        ...newEvent,
+        id: events.length + 1,
+        registrations: 0,
+      }
+      setEvents([...events, eventToAdd])
+      setNewEvent({
+        title: "",
+        date: "",
+        time: "",
+        location: "",
+        type: "Academic",
+        description: "",
+      })
+      setShowAddEvent(false)
+    }
+  }
+
+  const handleEditEvent = (event: any) => {
+    setEditingEvent(event)
+    setNewEvent({
+      title: event.title,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      type: event.type,
+      description: event.description,
+    })
+    setShowAddEvent(true)
+  }
+
+  const handleUpdateEvent = () => {
+    if (editingEvent && newEvent.title && newEvent.date && newEvent.time && newEvent.location) {
+      const updatedEvents = events.map((event) => (event.id === editingEvent.id ? { ...event, ...newEvent } : event))
+      setEvents(updatedEvents)
+      setEditingEvent(null)
+      setNewEvent({
+        title: "",
+        date: "",
+        time: "",
+        location: "",
+        type: "Academic",
+        description: "",
+      })
+      setShowAddEvent(false)
+    }
+  }
+
+  const handleDeleteEvent = (eventId: number) => {
+    if (confirm("Are you sure you want to delete this event?")) {
+      setEvents(events.filter((event) => event.id !== eventId))
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingEvent(null)
     setNewEvent({
       title: "",
       date: "",
@@ -182,7 +239,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Active Events</p>
-                  <p className="text-2xl font-bold text-gray-900">{mockEvents.length}</p>
+                  <p className="text-2xl font-bold text-gray-900">{events.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -197,7 +254,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 <div>
                   <p className="text-sm text-gray-600">Event Registrations</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {mockEvents.reduce((sum, event) => sum + event.registrations, 0)}
+                    {events.reduce((sum, event) => sum + event.registrations, 0)}
                   </p>
                 </div>
               </div>
@@ -372,7 +429,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
               {showAddEvent && (
                 <Card className="mb-6 border-2 border-blue-200">
                   <CardHeader>
-                    <CardTitle className="text-lg">Add New Event</CardTitle>
+                    <CardTitle className="text-lg">{editingEvent ? "Edit Event" : "Add New Event"}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -441,8 +498,10 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={handleAddEvent}>Add Event</Button>
-                      <Button variant="outline" onClick={() => setShowAddEvent(false)}>
+                      <Button onClick={editingEvent ? handleUpdateEvent : handleAddEvent}>
+                        {editingEvent ? "Update Event" : "Add Event"}
+                      </Button>
+                      <Button variant="outline" onClick={handleCancelEdit}>
                         Cancel
                       </Button>
                     </div>
@@ -451,7 +510,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
               )}
 
               <div className="space-y-4">
-                {mockEvents.map((event) => (
+                {events.map((event) => (
                   <div
                     key={event.id}
                     className="flex items-center justify-between p-4 border border-gray-100 rounded-lg"
@@ -471,10 +530,20 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditEvent(event)}
+                        className="hover:bg-blue-50"
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteEvent(event.id)}
+                        className="hover:bg-red-50 hover:text-red-600"
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

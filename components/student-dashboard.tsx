@@ -120,7 +120,7 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
   const [settingsTab, setSettingsTab] = useState<"profile" | "notifications" | "privacy" | "preferences">("profile")
   const [punchStatus, setPunchStatus] = useState<"out" | "in">("out")
   const [punchTime, setPunchTime] = useState<string | null>(null)
-  const [totalHours, setTotalHours] = useState<string>("0h 0m")
+  const [totalHours, setTotalHours] = useState<string>("0h 0m 0s")
   const [punchHistory, setPunchHistory] = useState<
     Array<{
       date: string
@@ -129,9 +129,9 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
       duration: string
     }>
   >([
-    { date: "2024-01-10", punchIn: "8:30 AM", punchOut: "4:45 PM", duration: "8h 15m" },
-    { date: "2024-01-09", punchIn: "8:45 AM", punchOut: "5:00 PM", duration: "8h 15m" },
-    { date: "2024-01-08", punchIn: "8:20 AM", punchOut: "4:30 PM", duration: "8h 10m" },
+    { date: "2024-01-10", punchIn: "8:30:15 AM", punchOut: "4:45:30 PM", duration: "8h 15m 15s" },
+    { date: "2024-01-09", punchIn: "8:45:22 AM", punchOut: "5:00:45 PM", duration: "8h 15m 23s" },
+    { date: "2024-01-08", punchIn: "8:20:10 AM", punchOut: "4:30:55 PM", duration: "8h 10m 45s" },
   ])
 
   const [profileData, setProfileData] = useState({
@@ -165,6 +165,8 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
     },
   })
 
+  const [currentTime, setCurrentTime] = useState(new Date())
+
   useEffect(() => {
     const savedPunchStatus = localStorage.getItem(`punch_status_${user.studentId}`)
     const savedPunchTime = localStorage.getItem(`punch_time_${user.studentId}`)
@@ -178,6 +180,14 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
   }, [user.studentId])
 
   useEffect(() => {
+    const timeInterval = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+
+    return () => clearInterval(timeInterval)
+  }, [])
+
+  useEffect(() => {
     if (punchStatus === "in" && punchTime) {
       const interval = setInterval(() => {
         const punchInTime = new Date(punchTime)
@@ -185,8 +195,9 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
         const diff = now.getTime() - punchInTime.getTime()
         const hours = Math.floor(diff / (1000 * 60 * 60))
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-        setTotalHours(`${hours}h ${minutes}m`)
-      }, 60000) // Update every minute
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+        setTotalHours(`${hours}h ${minutes}m ${seconds}s`)
+      }, 1000) // Update every second instead of every minute
 
       return () => clearInterval(interval)
     }
@@ -212,6 +223,7 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
     const timeString = now.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
+      second: "2-digit",
       hour12: true,
     })
 
@@ -227,7 +239,8 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
       const diff = now.getTime() - punchInTime.getTime()
       const hours = Math.floor(diff / (1000 * 60 * 60))
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-      const duration = `${hours}h ${minutes}m`
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+      const duration = `${hours}h ${minutes}m ${seconds}s`
 
       // Add to history
       const newEntry = {
@@ -235,6 +248,7 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
         punchIn: punchInTime.toLocaleTimeString("en-US", {
           hour: "numeric",
           minute: "2-digit",
+          second: "2-digit",
           hour12: true,
         }),
         punchOut: timeString,
@@ -244,7 +258,7 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
       setPunchHistory((prev) => [newEntry, ...prev])
       setPunchStatus("out")
       setPunchTime(null)
-      setTotalHours("0h 0m")
+      setTotalHours("0h 0m 0s")
 
       localStorage.removeItem(`punch_status_${user.studentId}`)
       localStorage.removeItem(`punch_time_${user.studentId}`)
@@ -339,7 +353,7 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
                   <p className="text-2xl font-bold text-green-900">{punchStatus === "in" ? "Active" : "Inactive"}</p>
                   <p className="text-xs text-green-700 mt-1">
                     {punchStatus === "in"
-                      ? `Since ${punchTime ? new Date(punchTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }) : ""}`
+                      ? `Since ${punchTime ? new Date(punchTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true }) : ""}`
                       : "Not punched in"}
                   </p>
                 </div>
@@ -553,6 +567,30 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
 
           {activeTab === "punch-attendance" && (
             <div className="space-y-6">
+              <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
+                <CardContent className="pt-6">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-2">Current Time</p>
+                    <p className="text-3xl font-bold text-blue-600">
+                      {currentTime.toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                      })}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {currentTime.toLocaleDateString("en-US", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Punch In/Out Card */}
               <Card className="bg-white shadow-sm">
                 <CardHeader>
@@ -575,6 +613,7 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
                             {new Date(punchTime).toLocaleTimeString("en-US", {
                               hour: "numeric",
                               minute: "2-digit",
+                              second: "2-digit",
                               hour12: true,
                             })}
                           </p>
